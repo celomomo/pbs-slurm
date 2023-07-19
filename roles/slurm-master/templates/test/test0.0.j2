@@ -1,0 +1,159 @@
+#!/usr/bin/env expect
+source ./globals
+set mpicc              "/usr/local/openmpi/4.1.4/bin/mpicc"
+
+set file_in            "$test_dir/input"
+set file_out           "$test_dir/output"
+set file_err           "$test_dir/error"
+set test_prog          "$test_name.prog"
+
+set omp_num_threads    4
+set nodes              1
+set tasks_per_node     2
+
+set job_name           "MPI3.1-OpenMP"
+set job_id             0
+
+
+#
+# Test for existence of mpi compiler
+#
+if {[info exists mpicc] == 0} {
+        skip "Mpicc not defined, can't perform mpi testing"
+}
+if {[file executable $mpicc] == 0} {
+        skip "$mpicc does not exist"
+}
+if {[get_config_param "FrontendName"] ne "MISSING"} {
+        skip "This test is incompatible with front-end systems"
+}
+
+proc cleanup {} {
+        global job_id test_prog  
+
+        cancel_job $job_id
+        file delete $test_prog 
+}
+
+#
+# Rebuild program
+#
+if {$use_pmi} {
+        spawn $mpicc -fopenmp -Xlinker -rpath $slurm_dir/lib -L $slurm_dir/lib -lpmi -o $test_prog ${test_prog}.c
+        expect {
+                eof {
+                        wait
+                }
+        }
+} else {
+        spawn $mpicc -fopenmp -o $test_prog ${test_prog}.c
+
+        expect {
+                eof {
+                        wait
+                }
+        }
+}
+if {![file exists $test_prog]} {
+        skip "Unable to build test program"
+}
+#
+# Build input script file
+#
+make_bash_script $file_in "
+ #!/bin/bash
+ export OMPI_MCA_btl_openib_allow_ib=1
+ export PMIX_MCA_gds=hash
+ export OMP_NUM_THREADS=$omp_num_threads
+ module load ucx/1.16.0
+ module load openmpi/4.1.4
+ $srun --mpi=pmix_v3 $test_prog
+ 
+ echo MPI_TASKS=\$SLURM_NPROCS
+ echo TASK_COMPLETE
+"
+
+#
+# Spawn an sbatch job that uses stdout/err and confirm their contents
+#
+set timeout $max_job_delay
+set no_start 0
+spawn $sbatch -N$nodes --ntasks-per-node=$tasks_per_node -J $job_name -o $file_out -e $file_err -t2 $file_in
+expect {
+        -re "Submitted batch job ($number)" {
+                set job_id $expect_out(1,string)
+                exp_continue
+        }
+        -re "Batch job submission failed" {
+                set no_start 1
+                exp_continue
+        }
+        -re "Unable to contact" {
+                fail "Slurm appears to be down"
+        }
+        timeout {
+                fail "srun not responding"
+        }
+        eof {
+                wait
+        }
+}
+
+if {$no_start != 0} {
+        skip "Partition too small for test"
+}
+if {$job_id == 0} {
+        fail "Batch submit failure"
+}
+
+#
+# Wait for job to complete
+#
+wait_for_job -fail $job_id "DONE"
+
+#
+# Check for desired output in stdout
+#
+wait_for_file -fail $file_out
+set complete        0
+set matches         0
+set openmp_rank_sum 0
+spawn $bin_cat $file_out
+expect {
+        -re "Hello from thread ($number) out of ($number) from process ($number) out of ($number) on $re_word_str" {
+                incr openmp_rank_sum $expect_out(1,string)
+                incr matches
+                exp_continue
+        }
+        -re "MPI_TASKS=($number)" {
+                set task_cnt $expect_out(1,string)
+                exp_continue
+        }
+
+        -re "TASK_COMPLETE" {
+                incr complete
+                exp_continue
+        }
+        eof {
+                wait
+        }
+}
+set expected_openmp_rank_sum 0
+for {set i 1} {$i < $omp_num_threads} {incr i} {
+        incr expected_openmp_rank_sum $i
+}
+set expected_openmp_rank_sum [expr $expected_openmp_rank_sum * $task_cnt]
+
+set failure_message ""
+if {$matches == 0} {
+        set failure_message "No MPI communications occurred."
+} elseif {$complete == 0} {
+        set failure_message "Test failed to complete"
+} elseif {$openmp_rank_sum != $expected_openmp_rank_sum} {
+        set failure_message "Invalid openmp rank values ($openmp_rank_sum != $expected_openmp_rank_sum)"
+}
+
+if {$failure_message != ""} {        
+        log_debug "Check contents of $file_err"
+        fail $failure_message
+}

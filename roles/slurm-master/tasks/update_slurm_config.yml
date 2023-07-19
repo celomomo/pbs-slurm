@@ -1,0 +1,104 @@
+- name: Update slurm config
+  hosts: "{{ target }}"
+  become: true
+  vars_files:
+    - /root/minhnh/tokyouniversity2308/roles/slurm-master/vars/main.yml
+  tasks:
+  - name: update slurm file
+    template:
+      src:   "{{ item.src }}"
+      dest:  "/etc/slurm/{{ item.dest }}"
+      owner: "slurm"
+      group: "slurm"
+      mode:  "{{ item.perm }}"
+    with_items:
+      - {src: ../templates/slurm.conf.j2, dest: slurm.conf, perm: "0644"}
+#      - {src: ../templates/gres.conf.j2, dest: gres.conf, perm: "0644"}
+#      - {src: ../templates/cgroup.conf.j2, dest: cgroup.conf, perm: "0644"}
+      #- {src: ../templates/slurmdbd.conf.j2, dest: slurmdbd.conf, perm: "0600"}
+
+#- name: Update munge-key
+#  hosts: "{{ target }}"
+#  become: true
+#  vars_files:
+#    - /root/minhnh/tokyouniversity2308/roles/slurm-master/vars/main.yml
+#  tasks:
+#  - name: update munge key file
+#    template:
+#      src:   "{{ item.src }}"
+#      dest:  "/etc/munge/{{ item.dest }}"
+#      owner: "munge"
+ #     group: "munge"
+ #     mode:  "{{ item.perm }}"
+ #   with_items:
+ #     - {src: ../templates/munge.key.j2, dest: munge.key, perm: "0400"}
+
+#- name: Update slurmctld and slurmdbd services
+#  hosts: slurm-master
+#  vars_files:
+#    - /root/minhnh/tokyouniversity2308/roles/slurm-master/vars/main.yml
+#  tasks:
+#  - name: Update slurmctld and slurmdbd services
+#    template:
+#      src: "{{ item.src }}"
+#      dest: /etc/systemd/system/{{ item.dest }}
+#    with_items:
+#      - {src: ../templates/slurmctld.service.j2, dest: slurmctld.service}
+#      - {src: ../templates/slurmdbd.service.j2, dest: slurmdbd.service}
+
+#- name: Update slurmd services
+#  hosts: slurm-slave
+#  vars_files:
+#    - /root/minhnh/tokyouniversity2308/roles/slurm-master/vars/main.yml
+#  tasks:
+#  - name: Update slurmd services
+#    template:
+#      src: "{{ item.src }}"
+#      dest: /etc/systemd/system/{{ item.dest }}
+#    with_items:
+#      - {src: ../templates/slurmd.service.j2, dest: slurmd.service}
+
+
+- name: Restart slurmctld and slurmdbd
+  hosts: slurm-master
+  become: true
+  tasks:
+  - name: Restart slurmdbd and slurmdbd services on Slurm master node
+    systemd:
+      daemon_reload: true
+      name: "{{ item.name }}"
+      state: restarted
+      enabled: yes
+    with_items:
+      - { name: slurmdbd }
+      - { name: slurmctld }
+  
+- name: Restart slurmd
+  hosts: slurm-slave
+  become: true
+  tasks:
+  - name: Restart slurmd service on Slurm slave nodes
+    systemd:
+      daemon_reload: true
+      name: slurmd
+      state: restarted
+      enabled: yes
+
+#- name: Update slurm testsuite
+#  hosts: slurm-master
+#  vars_files:
+#    - /root/minhnh/tokyouniversity2308/roles/slurm-master/vars/main.yml
+#  tasks:
+#  - name : Update the test for slurm testsuite
+#    template:
+#     src: "../templates/test/{{ item.src }}"
+#      dest: "{{ SLURM_TEST_DIR }}/testsuite/expect/{{ item.dest }}"
+#      mode: '0775'
+#    with_items:
+#      - { src: test0.0.j2 , dest: test0.0 }
+#      - { src: test0.1.j2 , dest: test0.1 }
+#      - { src: test0.2.j2 , dest: test0.2 }
+#      - { src: test0.3.j2 , dest: test0.3 }
+#      - { src: test0.0.prog.c.j2 , dest: test0.0.prog.c }
+#      - { src: test0.1.prog.c.j2 , dest: test0.1.prog.c }
+#      - { src: test0.3.prog.c.j2 , dest: test0.3.prog.c }

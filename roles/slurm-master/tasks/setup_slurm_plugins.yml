@@ -1,0 +1,41 @@
+- name: Replace /etc/environment file
+  template:
+    src: environment.j2
+    dest: /etc/environment
+
+- name: Download Slurm package
+  get_url:
+    url: "{{ SLURM_LINK }}"
+    dest: "{{ LOCAL_DIR_SOFTWARE }}"
+    mode: 0700
+
+- name: Unarchive the Slurm package
+  unarchive:
+    src: "{{ LOCAL_DIR_SOFTWARE }}/{{ SLURM_TAR_FILE }}"
+    dest: "{{ LOCAL_DIR_SOFTWARE }}"
+    remote_src: yes
+
+- name: Install Slurm package
+  shell:
+    cmd: |
+      ./configure --prefix={{ SLURM_LOCAL_DIR }} --sysconfdir=/etc/slurm --localstatedir={{ SLURM_VAR_DIR }} --runstatedir={{ SLURM_VAR_DIR }}/run --enable-multiple-slurmd --enable-deprecated
+      make -j && make install
+    chdir: '{{ LOCAL_DIR_SOFTWARE }}/{{ SLURM_TAR_DIR }}'
+
+- name: Install Slurm PAM plugins
+  shell:
+   cmd: make && make install
+   chdir: "{{ LOCAL_DIR_SOFTWARE }}/{{ SLURM_TAR_DIR }}/contribs/pam_slurm_adopt"
+
+- name: Copy PAM config to Slurm local
+  shell:
+    cmd: |
+      cp {{ LOCAL_DIR_SOFTWARE }}/{{ SLURM_TAR_DIR }}/contribs/pam_slurm_adopt/.libs/* {{ SLURM_LOCAL_DIR }}/lib/
+      cp {{ LOCAL_DIR_SOFTWARE }}/{{ SLURM_TAR_DIR }}/contribs/pam_slurm_adopt/helper.h {{ SLURM_LOCAL_DIR }}/include/
+
+- name: Copy PMI header and libs to Slurm local
+  shell:
+    cmd: |
+      cp {{ LOCAL_DIR_SOFTWARE }}/{{ SLURM_TAR_DIR }}/contribs/pmi2/.libs/* {{ SLURM_LOCAL_DIR }}/lib/
+      cp {{ LOCAL_DIR_SOFTWARE }}/{{ SLURM_TAR_DIR }}/contribs/pmi2/pmi2.h {{ SLURM_LOCAL_DIR }}/include/
+

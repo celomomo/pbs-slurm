@@ -1,0 +1,67 @@
+- name: Create the slurm directories
+  file:
+    path: "{{ item.path }}"
+    state: directory
+    owner: "{{ SLURMCTL_OWNER }}"
+    group: "{{ SLURMCTL_OWNER_GRP }}"
+    mode: "{{ item.perm }}"
+  with_items:
+    - {path: "/etc/slurm", perm: "0755"}
+    - {path: "/var/spool", perm: "0755"}
+    - {path: "/var/spool/slurmctld", perm: "0755"}
+    - {path: "/var/spool/slurmdbd", perm: "0755"}
+    - {path: "/var/run", perm: "0755"}
+    - {path: "/var/log", perm: "0755"}
+
+- name: Config slurmdbd file
+  template:
+    src:   "{{ item.src  }}"
+    dest:  "/etc/slurm/{{ item.dest }}"
+    owner: "{{ SLURMCTL_OWNER }}"
+    group: "{{ SLURMCTL_OWNER_GRP }}"
+    mode:  "{{ item.perm }}"
+  with_items:
+    - {src: slurmdbd.conf.j2, dest: slurmdbd.conf, perm: "0600"}
+    - {src: slurm.conf.j2, dest: slurm.conf, perm: "0644"}
+
+- name: Setup systemd service
+  template:
+      src: "{{ item.src }}"
+      dest: /etc/systemd/system/{{ item.dest }}
+  with_items:
+      - {src: slurmctld.service.j2, dest: slurmctld.service}
+      - {src: slurmdbd.service.j2, dest: slurmdbd.service}
+
+
+- name: Copy munge.key from template
+  template:
+    src: munge.key.j2
+    dest: /etc/munge/munge.key
+
+- name: Change file ownership, group and permissions
+  file:
+    path: /etc/munge/munge.key
+    owner: '{{ MUNGE_OWNER }}'
+    group: '{{ MUNGE_GRP }}'
+    mode: 0600
+
+- name: Restart munge
+  systemd:
+    daemon_reload: true
+    name: munge
+    state: restarted
+    enabled: yes
+
+- name: Restart slurmdbd
+  systemd:
+    daemon_reload: true
+    name: slurmdbd
+    state: restarted
+    enabled: yes
+
+- name: Restart slurmctld
+  systemd:
+    daemon_reload: true
+    name: slurmctld
+    state: restarted
+    enabled: yes

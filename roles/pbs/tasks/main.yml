@@ -1,0 +1,55 @@
+---
+#Follow guide from https://github.com/openpbs/openpbs/blob/master/INSTALL
+- name: Replace hosts file from template
+  template:
+    src: hosts.j2
+    dest: /etc/hosts
+
+- name: Configure and enable powertools repo
+  yum:
+    name: dnf-plugins-core
+    state: present
+    update_cache: yes
+  when: ansible_distribution == "Rocky" and ansible_distribution_major_version == "8"
+
+- name: Enable powertools repo
+  shell: dnf config-manager --set-enabled powertools
+  when: ansible_distribution == "Rocky" and ansible_distribution_major_version == "8"
+ 
+- name: Install the prerequisite packages for building PBS
+  action: "{{ Installer[ansible_distribution] }} state=present name={{ Package[ansible_distribution] }} update_cache=yes"
+
+- name: Install the prerequisite packages for running PBS
+  action: "{{ Installer[ansible_distribution] }} state=present name={{ Package[ansible_distribution] }} update_cache=yes"
+
+- name: Clone the PBS git to /opt/git/openpbs
+  git:
+    repo: https://github.com/openpbs/openpbs.git
+    dest: /opt/git/openpbs
+    single_branch: yes
+    version: master
+
+- name: Build PBS from source and configure PBS
+  shell:
+    cmd: |
+      ./autogen.sh
+      ./configure --prefix=/opt/pbs
+      make -j && make install
+      /opt/pbs/libexec/pbs_postinstall
+    chdir: /opt/git/openpbs 
+
+- name: Replace the file /etc/pbs.conf from template
+  template:
+    src: pbs.conf.j2
+    dest: /etc/pbs.conf
+
+- name: Modify file permission to add SUID privilege
+  file:
+    path: "{{ item }}"
+    mode: 4755
+  with_items:
+    - "/opt/pbs/sbin/pbs_iff"
+    - "/opt/pbs/sbin/pbs_rcp"
+
+- name: Start the PBS service
+  shell: /etc/init.d/pbs start

@@ -1,0 +1,14 @@
+AuthType=auth/munge
+AuthInfo=/var/run/munge/munge.socket.2
+DbdAddr={{ SlurmctldHost }}
+
+DbdHost={{ SlurmctldHost }}
+
+SlurmUser={{ SLURM_USER }}
+DebugLevel=verbose
+LogFile={{ SLURM_VAR_DIR }}/log/slurmdbd.log
+PidFile={{ SLURM_VAR_DIR }}/run/slurmdbd.pid
+StorageType=accounting_storage/mysql
+StoragePass={{ SLURM_DBD_PASS  }}
+StorageUser={{ SLURM_DBD_USER }}
+StorageLoc={{ SLURM_DBD_DB }}

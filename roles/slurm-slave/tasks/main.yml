@@ -1,0 +1,62 @@
+---
+# tasks file for slurm
+- name: Replace /etc/hosts file from template
+  template:
+    src: hosts.j2
+    dest: /etc/hosts
+
+- name: Configure and enable powertools repo
+  yum:
+    name: dnf-plugins-core
+    state: present
+    update_cache: yes
+  when: ansible_distribution == "Rocky"
+# and ansible_distribution_major_version == "8"
+
+- name: Enable powertools repo
+  shell: dnf config-manager --set-enabled powertools
+  when: ansible_distribution == "Rocky"
+# and ansible_distribution_major_version == "8"
+
+- name: Create slurm group
+  group:
+    name: '{{ SLURM_USER }}'
+    gid: '{{ SLURM_GID }}'
+
+- name: Create slurm user
+  user:
+    name: '{{ SLURM_USER }}'
+    group: '{{ SLURM_GRP }}'
+    uid: '{{ SLURM_ID }}'
+    shell: /bin/bash
+    state: present
+
+- name: create munge group
+  group:
+    name: '{{ MUNGE_GRP }}'
+    gid: '{{ MUNGE_GID }}'
+
+- name: create munge user
+  user:
+    name: '{{ MUNGE_OWNER }}'
+    group: '{{ MUNGE_GRP }}'
+    uid: '{{ MUNGE_ID }}'
+    shell: /usr/sbin/nologin
+    state: present
+
+- name: Setup dependencies
+  action: "{{ installer[ansible_distribution] }} state=present name={{ ClientPackage[ansible_distribution] }} update_cache=yes"
+
+- name: setup services munge, slurmd
+  include_tasks:
+    file: '{{ item.fname }}'
+  with_items:
+    - { fname: setup_munge.yml }
+    - { fname: setup_slurm_plugins.yml }
+    - { fname: setup_slurmd.yml }
+
+#- name: prepare the slurm env
+#  template:
+#    src: environment.j2
+#    dest: /etc/environment
+

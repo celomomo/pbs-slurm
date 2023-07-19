@@ -1,0 +1,56 @@
+- name: Create the slurm directories
+  file:
+    path: "{{ item.path }}"
+    state: directory
+    owner: "{{ SLURMD_OWNER }}"
+    group: "{{ SLURMD_OWNER_GRP }}"
+    mode:  "{{ item.perm }}"
+  with_items:
+    - {path: "/etc/slurm", perm: "0755"}
+    - {path: "{{ SLURM_VAR_DIR }}/spool", perm: "0755"}
+    - {path: "{{ SLURM_VAR_DIR }}/spool/slurmd", perm: "0755"}
+    - {path: "{{ SLURM_VAR_DIR }}/run", perm: "0755"}
+    - {path: "{{ SLURM_VAR_DIR }}/log", perm: "0755"}
+
+- name: Provision configuration files for Slurmd
+  template:
+    src:   "{{ item.src }}"
+    dest:  "/etc/slurm/{{ item.dest }}"
+  with_items:
+    - {src: cgroup.conf.j2, dest: cgroup.conf, perm: "0600"}
+    - {src: slurm.conf.j2, dest: slurm.conf, perm: "0600"}
+    - {src: gres.conf.j2, dest: gres.conf, perm: "0600"}
+
+#- name: Copy mungekey to local node
+#  shell: cp -f {{ NFS_DIR_SOFTWARE }}/munge.key /etc/munge/munge.key
+- name: Copy mungekey from template
+  template:
+    src: munge.key.j2
+    dest: /etc/munge/munge.key
+
+- name: Change file ownership, group and permissions
+  file:
+    path: /etc/munge/munge.key
+    owner: '{{ MUNGE_OWNER }}'
+    group: '{{ MUNGE_GRP }}'
+    mode: 0600
+
+- name: Setup systemd service
+  template:
+    src: slurmd.service.j2
+    dest: /etc/systemd/system/slurmd.service
+
+- name: Restart munge
+  systemd:
+    daemon_reload: true
+    name: munge
+    state: restarted
+    enabled: yes
+
+- name: Restart slurmd
+  systemd:
+    daemon_reload: true
+    name: slurmd
+    state: restarted
+    enabled: yes
+

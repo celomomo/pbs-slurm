@@ -1,0 +1,38 @@
+- name: Download munge package
+  get_url:
+    url: "{{ MUNGE_LINK }}"
+    dest: "{{ LOCAL_DIR_SOFTWARE }}/{{ MUNGE_TAR_FILE }}"
+    mode: 0700
+
+- name: Untar the munge package
+  unarchive:
+    src: "{{ LOCAL_DIR_SOFTWARE }}/{{ MUNGE_TAR_FILE }}"
+    dest: "{{ LOCAL_DIR_SOFTWARE }}"
+    remote_src: yes
+
+- name: Run configure munge
+  shell: |
+    ./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var --runstatedir=/var/run
+    make -j && sudo make install
+    rm -rf "{{ LOCAL_DIR_SOFTWARE }}/{{ MUNGE_TAR_FILE }}"
+  args:
+    chdir: "{{ LOCAL_DIR_SOFTWARE }}/{{ MUNGE_DIR }}"
+
+- name: Create the munge directories
+  file:
+    path: "{{ item.path }}"
+    state: directory
+    owner: "{{ MUNGE_OWNER }}"
+    group: "{{ MUNGE_GID }}"
+    mode: "{{ item.perm }}"
+  with_items:
+    - {path: "/var/run/munge", perm: "0755"}
+    - {path: "/etc/munge", perm: "0700"}
+    - {path: "/var/log/munge", perm: "0700"}
+    - {path: "/var/lib/munge", perm: "0700"}
+
+- name: Register munge as systemd service
+  template:
+    src: munge.service.j2
+    dest: /etc/systemd/system/munge.service
+

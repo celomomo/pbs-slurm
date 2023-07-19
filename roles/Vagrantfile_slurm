@@ -1,0 +1,49 @@
+rockyservers = [
+  { :hostname => "Rockycontroller",  :ip => "10.10.11.12", :playbook => "install_slurm_master.yml" },
+  { :hostname => "Rockycompute",     :ip => "10.10.11.13", :playbook => "install_slurm_slave.yml" },
+]
+ubuntuservers = [
+  { :hostname => "Ubuntucontroller", :ip => "10.10.11.14", :playbook => "install_slurm_master.yml" },
+  { :hostname => "Ubuntucompute",    :ip => "10.10.11.15", :playbook => "install_slurm_slave.yml" },
+]
+
+Vagrant.configure("2") do |config|
+    config.vagrant.plugins = "vagrant-libvirt"
+    config.ssh.forward_agent = true
+    config.ssh.forward_x11 = true
+    config.vm.define "Rockycontroller" do |node|
+      node.vm.provision "ansible" do |ansible|
+      ansible.limit = "Rockycontroller,Ubuntucontroller"
+      ansible.playbook = "install_slurm_master.yml"
+      end
+      node.vm.provision "ansible" do |ansible|
+      ansible.limit = "Rockycompute,Ubuntucompute"
+      ansible.playbook = "install_slurm_slave.yml"
+      end
+    end
+    rockyservers.each do |conf|
+      config.vm.define conf[:hostname] do |node|
+        node.vm.box = "generic/rocky8"
+        node.vm.hostname = conf[:hostname]
+        node.vm.network "private_network", ip: conf[:ip]
+        node.vm.provider :libvirt do |lv|
+          lv.storage_pool_name="pool"
+          lv.memory = "8196"
+          lv.cpus = "8"
+        end
+      end
+    end
+    
+    ubuntuservers.each do |conf|
+      config.vm.define conf[:hostname] do |node|
+        node.vm.box = "generic/ubuntu2204"
+        node.vm.hostname = conf[:hostname]
+        node.vm.network "private_network", ip: conf[:ip]
+        node.vm.provider :libvirt do |lv|
+          lv.storage_pool_name="pool"
+          lv.memory = "8196"
+          lv.cpus = "8"
+        end
+      end
+    end
+end

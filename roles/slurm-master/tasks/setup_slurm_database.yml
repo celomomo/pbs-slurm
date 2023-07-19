@@ -1,0 +1,17 @@
+- name: Check if DB exists
+  shell:
+   cmd:  mysql -e 'SHOW DATABASES;' | grep '{{ SLURM_DBD_DB }}'
+  register: dbstatus
+  failed_when: "'FAILED' in dbstatus.stderr"
+
+- name: Create slurm database in mysql
+  shell: mysql -u root -e "create database {{ SLURM_DBD_DB }};"
+  when: dbstatus.stdout == ""
+
+- name: Configure slurm database in mysql
+  shell: 
+   cmd: |
+    mysql -u root -e "create user '{{ SLURM_DBD_USER }}'@'localhost' identified by '{{ SLURM_DBD_PASS }}';"
+    mysql -u root -e "create user '{{ SLURM_DBD_USER }}'@'%' identified by '{{ SLURM_DBD_PASS }}';"
+    mysql -u root -e "grant all on {{ SLURM_DBD_DB }}.* TO '{{ SLURM_DBD_USER }}'@'localhost';"
+    mysql -u root -e "grant all on {{ SLURM_DBD_DB }}.* TO '{{ SLURM_DBD_USER }}'@'%';"

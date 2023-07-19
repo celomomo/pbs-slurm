@@ -1,0 +1,75 @@
+---
+# tasks file for slurm
+- name: Replace /etc/hosts file from template
+  template:
+    src: hosts.j2
+    dest: /etc/hosts
+
+- name: Configure and enable powertools repo
+  yum:
+    name: dnf-plugins-core
+    state: present
+    update_cache: yes
+  when: ansible_distribution == "Rocky" 
+#and ansible_distribution_major_version == "8"
+
+- name: Enable powertools repo
+  shell: dnf config-manager --set-enabled powertools
+  when: ansible_distribution == "Rocky" 
+#and ansible_distribution_major_version == "8"
+
+- name: Create directory if it does not exist
+  file:
+    path: "{{ item }}"
+    state: directory
+  with_items:
+    - " {{ LOCAL_DIR_SOFTWARE }}"
+    - "/etc/my.cnf.d/"
+
+- name: Create slurm group
+  group:
+    name: '{{ SLURM_GRP }}'
+    gid: '{{ SLURM_GID }}'
+
+- name: Create slurm user
+  user:
+    name: '{{ SLURM_USER }}'
+    group: '{{ SLURM_GRP }}'
+    uid: '{{ SLURM_ID }}'
+    shell: /bin/bash
+    state: present
+
+- name: Create munge group
+  group:
+    name: '{{ MUNGE_GRP }}'
+    gid: '{{ MUNGE_GID }}'
+
+- name: Create munge user
+  user:
+    name: '{{ MUNGE_OWNER }}'
+    group: '{{ MUNGE_GRP }}'
+    uid: '{{ MUNGE_ID }}'
+    shell: /usr/sbin/nologin
+    state: present
+
+- name: Setup dependencies
+  action: "{{ installer[ansible_distribution] }} state=present name={{ ServerPackage[ansible_distribution] }} update_cache=yes"
+
+- name: Config mysql
+  template:
+   src: mysql_config.j2
+   dest: "{{ SqlConfPath[ansible_distribution] }}"
+
+- name: Restart mysql service
+  systemd:
+    name: mariadb
+    state: restarted
+
+- name: Setup services munge, slurmdbd, slurmctld.
+  include_tasks: 
+    file: '{{ item.fname }}'
+  with_items:
+    - { fname: setup_munge.yml }
+    - { fname: setup_slurm_plugins.yml }
+    - { fname: setup_slurm_database.yml }
+    - { fname: setup_slurmctld_slurmdbd.yml }

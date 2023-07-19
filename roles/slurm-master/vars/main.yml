@@ -1,0 +1,107 @@
+---
+# vars file for slurm
+installer:
+ Ubuntu: apt
+ Rocky: yum
+
+ServerPackage:
+ Ubuntu: libmariadb-dev, mariadb-server, libhdf5-dev, libevent-dev,libhwloc-dev,libreadline-dev,libssl-dev,libpython3-dev,libdbus-1-dev,hwloc,lua5.4,libglib2.0-0,libglib2.0-dev,libgtk2.0-0,libgtk2.0-dev,libpam0g-dev,libyaml-dev,libevent-dev,libhwloc-dev,libreadline-dev,liblua5.3-dev,libhdf5-dev,xbase-clients,x11-apps,mlocate,libnuma-dev,libpciaccess-dev
+ Rocky: bzip2,zip,mariadb-devel, mariadb-server, libevent-devel, hdf5-devel, numactl ,numactl-devel ,hwloc ,hwloc-devel ,lua,lua-devel,readline-devel,rrdtool-devel,ncurses-devel,xorg-x11-apps
+
+ClientPackage:
+ Ubuntu: libmariadb-dev, libhdf5-dev, libevent-dev,libhwloc-dev,libreadline-dev,libssl-dev,libpython3-dev,libdbus-1-dev,hwloc,lua5.4,libglib2.0-0,libglib2.0-dev,libgtk2.0-0,libgtk2.0-dev,libpam0g-dev,libyaml-dev,libevent-dev,libhwloc-dev,libreadline-dev,liblua5.3-dev,libhdf5-dev,xbase-clients,x11-apps,mlocate,libnuma-dev,libpciaccess-dev
+ Rocky: bzip2,zip,mariadb-devel, libevent-devel, hdf5-devel, numactl ,numactl-devel ,hwloc ,hwloc-devel ,lua,lua-devel,readline-devel,rrdtool-devel,ncurses-devel,xorg-x11-apps
+
+SqlConfPath:
+ Ubuntu: /etc/mysql/my.cnf
+ Rocky: /etc/my.cnf.d
+
+############################################
+LOCAL_DIR_SOFTWARE: "/usr/local/src"
+SOFTWARE_DIR_OWNER: "root"
+
+SLURM_VERSION: "23.02.2"
+SLURM_LINK: "https://download.schedmd.com/slurm/slurm-{{ SLURM_VERSION }}.tar.bz2"
+SLURM_TAR_FILE: "slurm-{{ SLURM_VERSION }}.tar.bz2"
+SLURM_TAR_DIR: "slurm-{{ SLURM_VERSION }}"
+SLURM_NFS_DIR: "{{ LOCAL_DIR_SOFTWARE }}/slurm"
+SLURM_LOCAL_DIR: "/usr/local/slurm/{{ SLURM_VERSION }}"
+#SLURM_VAR_DIR: "/var/slurm"
+SLURM_VAR_DIR: "/var"
+SLURM_TEST_DIR: "/home/slurm/test"
+SLURM_USER: "slurm"
+SLURM_GRP: "slurm"
+SLURMCTL_OWNER: "slurm"
+SLURMCTL_OWNER_GRP: "slurm"
+SLURMD_USER: "slurm"
+SLURMD_OWNER: "slurm"
+SLURMD_OWNER_GRP: "slurm"
+SLURM_ID: "989"
+SLURM_GID: "989"
+SLURM_DBD_USER: "slurm"
+SLURM_DBD_PASS: "wQoltc/H54zJ"
+SLURM_DBD_DB: "slurm_acct_db"
+
+#############################################
+MUNGE_LINK: "https://github.com/dun/munge/releases/download/munge-0.5.15/munge-0.5.15.tar.xz"
+MUNGE_VERSION: "0.5.15"
+MUNGE_TAR_FILE: "munge-0.5.15.tar.xz"
+MUNGE_DIR: "munge-0.5.15"
+MUNGE_OWNER: "munge"
+MUNGE_GRP: "munge"
+MUNGE_ID: "1101"
+MUNGE_GID: "1100"
+
+############################################
+# vars for enviroment file
+ENV_PATHS: "/usr/local/slurm/bin:/usr/local/pmix/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin:/usr/local/cuda/bin"
+ENV_LD_LIBRARY_PATHS: "/usr/local/slurm/23.02.2/lib"
+
+############################################
+PMIX_VERSION: "3.2.2"
+PMIX_LINK: "https://github.com/openpmix/openpmix/releases/download/v{{ PMIX_VERSION }}/pmix-{{ PMIX_VERSION }}.tar.gz"
+PMIX_TAR_FILE: "pmix-{{ PMIX_VERSION }}.tar.gz"
+PMIX_TAR_DIR: "pmix-{{ PMIX_VERSION }}"
+PMIX_NFS_DIR: "{{ NFS_DIR_SOFTWARE }}/pmix"
+PMIX_LOCAL_DIR: "/usr/local/pmix/3.2.2"
+#################################################
+UCX_LINK: "https://github.com/openucx/ucx.git"
+UCX_DIR: "ucx"
+#################################################
+OPENMPI_LINK_414: "https://download.open-mpi.org/release/open-mpi/v4.1/openmpi-4.1.4.tar.gz"
+OPENMPI_LINK_107: "https://download.open-mpi.org/release/open-mpi/v1.10/openmpi-1.10.7.tar.gz"
+OPENMPI_LINK_129: "https://download.open-mpi.org/release/open-mpi/v1.2/openmpi-1.2.9.tar.gz"
+OPENMPI_TAR_FILE_414: "openmpi-4.1.4.tar.gz"
+OPENMPI_TAR_FILE_107: "openmpi-1.10.7.tar.gz"
+OPENMPI_TAR_FILE_129: "openmpi-1.2.9.tar.gz"
+OPENMPI_DIR_414: "openmpi-4.1.4"
+OPENMPI_DIR_107: "openmpi-1.10.7"
+OPENMPI_DIR_129: "openmpi-1.2.9"
+OPENMPI_LOCAL_DIR_414: "/usr/local/openmpi/4.1.4/"
+OPENMPI_LOCAL_DIR_107: "/usr/local/openmpi/1.10.7/"
+OPENMPI_LOCAL_DIR_129: "/usr/local/openmpi/1.2.9/"
+
+## slurm.conf variables for TMDU
+#CPUs: 128
+#Boards: 1
+#SocketsPerBoard: 2
+#CoresPerSocket: 64
+#ThreadsPerCore: 1
+#Gres: "gpu:A100:8"
+#RealMemory: "2051958"
+#PartitionName: "general"
+#GresTypes: "gpu"
+#AccountingStorageTRES: "gres/gpu,gres/shard,ic/ofed"
+
+CPUs: 8
+Boards: 1
+SocketsPerBoard: 8
+CoresPerSocket: 1
+ThreadsPerCore: 1
+RealMemory: "7950"
+
+SlurmctldHost: "{{ ansible_distribution }}controller"
+ComputeNodes: "{{ ansible_distribution }}compute"
+NODES: "ALL"
+PartitionName: "general"
+

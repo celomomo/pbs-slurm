@@ -1,0 +1,23 @@
+- name: Create the slurm test dir
+  file:
+   path: '{{ SLURM_TEST_DIR }}'
+   state: directory
+   mode: '0755'
+
+- name: Copy the testsuite from the source
+  shell: 
+    cmd: "copy -r {{ LOCAL_DIR_SOFTWARE }}/{{ SLURM_TAR_DIR }}/testsuite {{ SLURM_TEST_DIR }}"
+
+- name: Update slurm testsuite
+  template:
+      src: "test/{{ item.src }}"
+      dest: "{{ SLURM_TEST_DIR }}/testsuite/expect/{{ item.dest }}"
+      mode: '0775'
+    with_items:
+      - { src: test0.0.j2 , dest: test0.0 }
+      - { src: test0.1.j2 , dest: test0.1 }
+      - { src: test0.2.j2 , dest: test0.2 }
+      - { src: test0.3.j2 , dest: test0.3 }
+      - { src: test0.0.prog.c.j2 , dest: test0.0.prog.c }
+      - { src: test0.1.prog.c.j2 , dest: test0.1.prog.c }
+      - { src: test0.3.prog.c.j2 , dest: test0.3.prog.c }
